@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Вход — IGNAT SMART CONTROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1220;--panel:#16223a;--line:#0a0f1a;--green:#3ddc5a;--blue:#3b8cff;--red:#ff4d4d;--yellow:#ffd23d;--txt:#e8f0ff;
+--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Press Start 2P',ui-monospace,Menlo,monospace;font-size:11px;line-height:1.7}
+body{padding:var(--safe-t) 0 var(--safe-b);min-height:100vh;
+background:linear-gradient(180deg,#0b1220,#0d1a2e 60%,#0b2a1c)}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+main,#loader{position:relative;z-index:1}
+main{max-width:900px;margin:0 auto;padding:16px}
+header{text-align:center;padding:20px 0}
+h1{font-size:clamp(16px,5vw,32px);margin:0 0 12px;color:var(--green);text-shadow:3px 3px 0 #0a3d1a,0 0 18px rgba(61,220,90,.5)}
+header p{color:var(--blue);margin:0}
+h2,h3{margin:0 0 10px}
+a{color:var(--blue)}
+
+#loader{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+#loader.hide{opacity:0;pointer-events:none}
+.logo{font-size:28px;color:var(--green);animation:bob 1s steps(4) infinite}
+.bar{width:220px;height:20px;border:4px solid #fff;background:#000}
+.bar i{display:block;height:100%;width:0;background:var(--green);animation:load 1.4s steps(10) forwards}
+@keyframes load{to{width:100%}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+
+.card{background:var(--panel);border:4px solid var(--line);border-radius:12px;box-shadow:inset 0 0 0 3px #26385c,0 6px 0 #070b14;padding:16px;margin-bottom:18px}
+#stationCard{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.station-img{width:120px;height:120px;border-radius:12px;background:#0d1626;border:4px solid var(--line);display:grid;place-items:center}
+.station-img span{width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,#3b8cff 0 25%,#1b2d4d 26% 60%,#2b3f66 61%);box-shadow:0 0 18px #3b8cff88;animation:glow 2s infinite alternate}
+@keyframes glow{to{box-shadow:0 0 30px #3ddc5a}}
+.station-info{flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.badge{padding:6px 10px;border:3px solid #000;border-radius:6px;font-size:10px}
+.badge.on{background:#1a7a32;color:#d6ffe0}
+.badge.off{background:#7a1f1f}
+.badge.wait{background:#7a6a1a}
+.badge.run{background:#1c4f99}
+.badge.err{background:#992244}
+
+.mc{font:inherit;color:#fff;background:#4a4f5a;border:4px solid #000;border-top-color:#8a909c;border-left-color:#8a909c;padding:12px 14px;cursor:pointer;border-radius:4px;min-height:44px;transition:transform .08s}
+.mc:hover{background:#5b6170}
+.mc:active{transform:translateY(3px);border-color:#000 #8a909c #8a909c #000}
+.mc.green{background:#2f9e44}.mc.green:hover{background:#3cc056}
+.mc.blue{background:#2767c9}.mc.blue:hover{background:#3b8cff}
+.mc.red{background:#a63030}.mc.red:hover{background:#cc4040}
+.mc:disabled{opacity:.45;cursor:not-allowed}
+.mc.busy{animation:pulse .6s infinite alternate}
+@keyframes pulse{to{background:#3b8cff}}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:18px}
+.icon{font:inherit;color:var(--txt);background:var(--panel);border:4px solid var(--line);box-shadow:inset 0 0 0 3px #26385c,0 5px 0 #070b14;border-radius:10px;padding:18px 8px;cursor:pointer;text-align:center;font-size:10px;transition:transform .12s}
+.icon b{display:block;font-size:34px;margin-bottom:10px;filter:drop-shadow(3px 3px 0 #000)}
+.icon:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 3px var(--green),0 9px 0 #070b14}
+.icon:active{transform:translateY(2px)}
+
+.log ul{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;font-size:9px}
+.log li{padding:6px 0;border-bottom:2px dashed #26385c;word-break:break-word}
+.ok{color:var(--green)}.bad{color:var(--red)}.dim{color:#8ea0c4}
+footer{text-align:center;font-size:8px;color:#8ea0c4;padding:10px 0 30px}
+
+#overlay{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
+#overlay[hidden],#app[hidden]{display:none}
+.win{width:min(560px,100%);max-height:92vh;overflow:auto;background:var(--panel);border:4px solid #000;box-shadow:inset 0 0 0 4px #3b8cff,0 0 40px #3b8cff55;border-radius:12px;padding:20px;position:relative;animation:pop .25s cubic-bezier(.2,1.4,.4,1)}
+.win.closing{animation:unpop .18s forwards}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+@keyframes unpop{to{transform:scale(.6);opacity:0}}
+.win h2{color:var(--green);padding-right:40px;font-size:13px}
+.win p{margin:0 0 14px}
+.x{position:absolute;top:10px;right:10px;width:38px;padding:8px 0}
+.vol{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.vol .mc{padding:18px 6px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+input[type=text],input[type=url]{width:100%;font:inherit;font-size:10px;padding:12px;background:#0a1020;color:#fff;border:3px solid #000;border-radius:4px;margin:8px 0}
+.prog{height:14px;border:3px solid #000;background:#050a14;margin:10px 0;display:none}
+.prog.on{display:block}
+.prog i{display:block;height:100%;width:40%;background:var(--green);animation:slide 1s linear infinite}
+@keyframes slide{from{margin-left:-40%}to{margin-left:100%}}
+.eq{display:flex;gap:5px;height:50px;align-items:flex-end;margin:12px 0}
+.eq i{width:12px;background:var(--blue);height:10px}
+.eq.play i{animation:eq .6s infinite alternate steps(5)}
+.eq i:nth-child(2){animation-delay:.1s}.eq i:nth-child(3){animation-delay:.2s}.eq i:nth-child(4){animation-delay:.3s}.eq i:nth-child(5){animation-delay:.15s}
+@keyframes eq{to{height:50px}}
+.cube{width:64px;height:64px;margin:16px auto;cursor:pointer;border:4px solid #000;background:linear-gradient(135deg,#6b4a2b 0 35%,#4aa83a 35% 50%,#6b4a2b 50%);position:relative;image-rendering:pixelated;transition:transform .15s}
+.cube:hover{transform:rotate(-6deg) scale(1.08)}
+.cube.done::after{content:'✔';position:absolute;inset:0;display:grid;place-items:center;font-size:34px;color:#3b8cff;text-shadow:2px 2px 0 #000}
+.terms-ok{text-align:center;min-height:20px;color:var(--blue)}
+.dev{padding:10px;border:3px solid #000;border-radius:6px;margin-bottom:8px;background:#0d1626}
+
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--safe-b));z-index:40;display:flex;flex-direction:column;gap:8px;width:min(92%,460px)}
+.toast{padding:12px;border:4px solid #000;border-radius:6px;font-size:10px;animation:pop .2s}
+.toast.ok{background:#1a7a32;color:#fff}.toast.bad{background:#992244;color:#fff}.toast.info{background:#1c4f99;color:#fff}
+
+.doc{max-width:760px;margin:0 auto;padding:20px;line-height:2}
+.doc h1{font-size:18px}.doc h2{color:var(--green);font-size:12px;margin-top:24px}
+.doc p,.doc li{font-size:10px;line-height:2}
+
+@media(max-width:480px){html,body{font-size:10px}.win{padding:16px}.station-img{width:90px;height:90px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+label{display:block;margin-top:10px;font-size:10px}
+.seen{outline:3px solid var(--green)}
+ol{margin:0 0 14px}
+.docbox{max-height:55vh;overflow:auto;font-size:10px;line-height:2;margin-bottom:12px;padding-right:6px}.docbox h3{color:#3ddc5a;margin:14px 0 4px;font-size:11px}
+
+.dots{display:flex;gap:12px;justify-content:center;margin:22px 0}.dots span{width:44px;height:44px;display:grid;place-items:center;background:#2767c9;border:4px solid #000;opacity:0;animation:dp 1.2s infinite}.dots span:nth-child(2){animation-delay:.3s}.dots span:nth-child(3){animation-delay:.6s}@keyframes dp{0%,15%{opacity:0;transform:scale(.6)}35%,80%{opacity:1;transform:scale(1)}100%{opacity:0}}
+</style></head><body>
+<main><header><h1>IGNAT SMART CONTROL</h1><p>Вход владельца</p></header><section class="card" id="box"></section>
+<footer><a href="index.html">← На главную</a></footer></main>
+<script src="config.js"></script>
+<script>
+const CFG = window.ISC_CONFIG || {};
+const P = (/^(https:\/\/|http:\/\/localhost)/i.test(CFG.PROXY_URL || '') ? CFG.PROXY_URL : '').replace(/\/$/, '');
+const $ = s => document.querySelector(s), box = $('#box');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let mode = 'login';
+
+async function req(method, path, body) {
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(P + path, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: ctl.signal });
+    let d = null; try { d = await r.json(); } catch {}
+    if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+    return d;
+  } finally { clearTimeout(to); }
+}
+const dots = t => { box.innerHTML = `<h2>${t}</h2><div class="dots"><span>1</span><span>2</span><span>3</span></div>`; };
+function formView(msg) {
+  const reg = mode === 'register';
+  box.innerHTML = `<h2>${reg ? 'РЕГИСТРАЦИЯ' : 'ВХОД ВЛАДЕЛЬЦА'}</h2>
+  <div class="row" style="margin-top:0"><button class="mc ${reg ? '' : 'blue'}" data-m="login">ВХОД</button><button class="mc ${reg ? 'blue' : ''}" data-m="register">РЕГИСТРАЦИЯ</button></div>
+  <label>Имя пользователя</label><input type="text" id="u" maxlength="24" autocomplete="username" autocapitalize="off" spellcheck="false">
+  <label>Пароль</label><input type="password" id="pw" autocomplete="${reg ? 'new-password' : 'current-password'}">
+  ${reg ? '<label>Повторите пароль</label><input type="password" id="pw2" autocomplete="new-password">' : ''}
+  <div class="row"><button class="mc" id="show">ПОКАЗАТЬ ПАРОЛЬ</button><button class="mc green" id="go">${reg ? 'ЗАРЕГИСТРИРОВАТЬСЯ' : 'ВОЙТИ'}</button></div>
+  <p class="bad" id="msg" style="font-size:10px">${esc(msg || '')}</p>
+  <p class="dim" style="font-size:8px">Почта и телефон не нужны, только имя пользователя и пароль. Пароль Яндекса здесь не вводится. Пароль проверяет ваш сервер и не хранится в браузере.</p>`;
+}
+function errText(e, reg) {
+  if (e.name === 'AbortError') return 'Тайм-аут. Повторите попытку позже.';
+  if (e.status === 401) return 'Неверное имя пользователя или пароль.';
+  if (e.status === 409) return 'Это имя уже занято.';
+  if (e.status === 403) return reg ? 'Регистрация закрыта владельцем.' : 'Доступ запрещён.';
+  if (e.status === 429) return 'Слишком много попыток. Подождите немного.';
+  if (e.status === 400) return 'Проверьте данные: имя 3–24 символа, пароль от 8.';
+  return 'Ошибка связи с сервером.';
+}
+async function submit() {
+  const u = $('#u').value.trim(), pw = $('#pw').value, reg = mode === 'register';
+  const bad = m => { $('#msg').textContent = m; };
+  if (!/^[A-Za-z0-9_]{3,24}$/.test(u)) return bad('Имя: 3–24 символа (буквы, цифры, _).');
+  if (pw.length < 8) return bad('Пароль: минимум 8 символов.');
+  if (reg && pw !== $('#pw2').value) return bad('Пароли не совпадают.');
+  $('#pw').value = ''; if ($('#pw2')) $('#pw2').value = '';
+  dots('ПРОВЕРКА ВХОДА');
+  try { await Promise.all([req('POST', reg ? '/site/register' : '/site/login', { username: u, password: pw }), sleep(1500)]); }
+  catch (e) { await sleep(600); return formView(errText(e, reg)); }
+  permStep(false);
+}
+async function permStep(afterReturn) {
+  dots('ПРОВЕРКА РАЗРЕШЕНИЯ');
+  try { await Promise.all([req('GET', '/api/devices'), sleep(1500)]); return okView(); }
+  catch (e) {
+    await sleep(600);
+    if ((e.status === 401 || e.status === 403) && !afterReturn) return askPerm();
+    if (e.status === 401 || e.status === 403) return failView();
+    return failView('Не удалось проверить разрешение (ошибка связи).');
+  }
+}
+function askPerm() {
+  box.innerHTML = `<h2>ПОДКЛЮЧИТЕ РАЗРЕШЕНИЕ</h2><p>Пожалуйста, подключите разрешение для MAKIGNAT. Вы перейдёте на официальную страницу Яндекса.</p>
+  <p class="dim" style="font-size:9px">Важно: разрешение выдаётся на официальной странице Яндекса. Пароль от Яндекса вводится только там. Нажмите «Продолжить» или «Отмена».</p>
+  <div class="row"><button class="mc green" id="cont">ПРОДОЛЖИТЬ</button><button class="mc red" id="cancel">ОТМЕНА</button></div>`;
+}
+function okView() {
+  box.innerHTML = `<h2>РАЗРЕШЕНИЕ УСПЕШНО ПОЛУЧЕНО</h2><p class="ok">Получилось! Теперь можно управлять колонкой.</p><button class="mc green" id="open" style="width:100%">ОТКРЫТЬ САЙТ</button>`;
+}
+function failView(m) {
+  box.innerHTML = `<h2>РАЗРЕШЕНИЕ НЕ ПОЛУЧЕНО</h2><p class="bad">${esc(m || 'К сожалению, права не сработали. Повторите попытку позже.')}</p>
+  <div class="row"><button class="mc blue" id="retry">ПОВТОРИТЬ</button><button class="mc" id="open">ОТКРЫТЬ САЙТ</button></div>`;
+}
+box.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.m) { mode = b.dataset.m; return formView(); }
+  if (b.id === 'show') { const t = $('#pw').type === 'password' ? 'text' : 'password'; $('#pw').type = t; if ($('#pw2')) $('#pw2').type = t; b.textContent = t === 'text' ? 'СКРЫТЬ ПАРОЛЬ' : 'ПОКАЗАТЬ ПАРОЛЬ'; return; }
+  if (b.id === 'go') return submit();
+  if (b.id === 'cont') { location.href = P + '/auth/login?mode=owner&return=' + encodeURIComponent(location.origin + location.pathname + '?step=perm'); return; }
+  if (b.id === 'cancel') return failView('Разрешение не выдано. Без него управление колонкой не работает. Повторите попытку позже.');
+  if (b.id === 'retry') return permStep(false);
+  if (b.id === 'open') { location.href = 'index.html'; }
+});
+box.addEventListener('keydown', e => { if (e.key === 'Enter' && $('#go')) submit(); });
+
+(async function init() {
+  if (!P) { box.innerHTML = '<h2>СЕРВЕР НЕ ПОДКЛЮЧЁН</h2><p class="bad">Укажите PROXY_URL в config.js. Пароль нельзя проверять в браузере, это делает ваш сервер. Без него вход не работает.</p>'; return; }
+  dots('ПРОВЕРКА ВХОДА');
+  try {
+    await req('GET', '/site/me');
+    if (new URLSearchParams(location.search).get('step') === 'perm') return permStep(true);
+    location.href = 'index.html';
+  } catch (e) { formView(); }
+})();
+
+</script></body></html>

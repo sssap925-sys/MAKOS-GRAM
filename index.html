@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>IGNAT SMART CONTROL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>html,body{background:#0b1220;color:#e8f0ff;font-family:monospace}.docbox{max-height:55vh;overflow:auto;font-size:10px;line-height:2;margin-bottom:12px;padding-right:6px}.docbox h3{color:#3ddc5a;margin:14px 0 4px;font-size:11px}
+</style>
+<style>
+:root{--bg:#0b1220;--panel:#16223a;--line:#0a0f1a;--green:#3ddc5a;--blue:#3b8cff;--red:#ff4d4d;--yellow:#ffd23d;--txt:#e8f0ff;
+--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Press Start 2P',ui-monospace,Menlo,monospace;font-size:11px;line-height:1.7}
+body{padding:var(--safe-t) 0 var(--safe-b);min-height:100vh;
+background:linear-gradient(180deg,#0b1220,#0d1a2e 60%,#0b2a1c)}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+main,#loader{position:relative;z-index:1}
+main{max-width:900px;margin:0 auto;padding:16px}
+header{text-align:center;padding:20px 0}
+h1{font-size:clamp(16px,5vw,32px);margin:0 0 12px;color:var(--green);text-shadow:3px 3px 0 #0a3d1a,0 0 18px rgba(61,220,90,.5)}
+header p{color:var(--blue);margin:0}
+h2,h3{margin:0 0 10px}
+a{color:var(--blue)}
+
+#loader{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+#loader.hide{opacity:0;pointer-events:none}
+.logo{font-size:28px;color:var(--green);animation:bob 1s steps(4) infinite}
+.bar{width:220px;height:20px;border:4px solid #fff;background:#000}
+.bar i{display:block;height:100%;width:0;background:var(--green);animation:load 1.4s steps(10) forwards}
+@keyframes load{to{width:100%}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+
+.card{background:var(--panel);border:4px solid var(--line);border-radius:12px;box-shadow:inset 0 0 0 3px #26385c,0 6px 0 #070b14;padding:16px;margin-bottom:18px}
+#stationCard{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.station-img{width:120px;height:120px;border-radius:12px;background:#0d1626;border:4px solid var(--line);display:grid;place-items:center}
+.station-img span{width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,#3b8cff 0 25%,#1b2d4d 26% 60%,#2b3f66 61%);box-shadow:0 0 18px #3b8cff88;animation:glow 2s infinite alternate}
+@keyframes glow{to{box-shadow:0 0 30px #3ddc5a}}
+.station-info{flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.badge{padding:6px 10px;border:3px solid #000;border-radius:6px;font-size:10px}
+.badge.on{background:#1a7a32;color:#d6ffe0}
+.badge.off{background:#7a1f1f}
+.badge.wait{background:#7a6a1a}
+.badge.run{background:#1c4f99}
+.badge.err{background:#992244}
+
+.mc{font:inherit;color:#fff;background:#4a4f5a;border:4px solid #000;border-top-color:#8a909c;border-left-color:#8a909c;padding:12px 14px;cursor:pointer;border-radius:4px;min-height:44px;transition:transform .08s}
+.mc:hover{background:#5b6170}
+.mc:active{transform:translateY(3px);border-color:#000 #8a909c #8a909c #000}
+.mc.green{background:#2f9e44}.mc.green:hover{background:#3cc056}
+.mc.blue{background:#2767c9}.mc.blue:hover{background:#3b8cff}
+.mc.red{background:#a63030}.mc.red:hover{background:#cc4040}
+.mc:disabled{opacity:.45;cursor:not-allowed}
+.mc.busy{animation:pulse .6s infinite alternate}
+@keyframes pulse{to{background:#3b8cff}}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:18px}
+.icon{font:inherit;color:var(--txt);background:var(--panel);border:4px solid var(--line);box-shadow:inset 0 0 0 3px #26385c,0 5px 0 #070b14;border-radius:10px;padding:18px 8px;cursor:pointer;text-align:center;font-size:10px;transition:transform .12s}
+.icon b{display:block;font-size:34px;margin-bottom:10px;filter:drop-shadow(3px 3px 0 #000)}
+.icon:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 3px var(--green),0 9px 0 #070b14}
+.icon:active{transform:translateY(2px)}
+
+.log ul{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;font-size:9px}
+.log li{padding:6px 0;border-bottom:2px dashed #26385c;word-break:break-word}
+.ok{color:var(--green)}.bad{color:var(--red)}.dim{color:#8ea0c4}
+footer{text-align:center;font-size:8px;color:#8ea0c4;padding:10px 0 30px}
+
+#overlay{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
+#overlay[hidden],#app[hidden]{display:none}
+.win{width:min(560px,100%);max-height:92vh;overflow:auto;background:var(--panel);border:4px solid #000;box-shadow:inset 0 0 0 4px #3b8cff,0 0 40px #3b8cff55;border-radius:12px;padding:20px;position:relative;animation:pop .25s cubic-bezier(.2,1.4,.4,1)}
+.win.closing{animation:unpop .18s forwards}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+@keyframes unpop{to{transform:scale(.6);opacity:0}}
+.win h2{color:var(--green);padding-right:40px;font-size:13px}
+.win p{margin:0 0 14px}
+.x{position:absolute;top:10px;right:10px;width:38px;padding:8px 0}
+.vol{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.vol .mc{padding:18px 6px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+input[type=text],input[type=url]{width:100%;font:inherit;font-size:10px;padding:12px;background:#0a1020;color:#fff;border:3px solid #000;border-radius:4px;margin:8px 0}
+.prog{height:14px;border:3px solid #000;background:#050a14;margin:10px 0;display:none}
+.prog.on{display:block}
+.prog i{display:block;height:100%;width:40%;background:var(--green);animation:slide 1s linear infinite}
+@keyframes slide{from{margin-left:-40%}to{margin-left:100%}}
+.eq{display:flex;gap:5px;height:50px;align-items:flex-end;margin:12px 0}
+.eq i{width:12px;background:var(--blue);height:10px}
+.eq.play i{animation:eq .6s infinite alternate steps(5)}
+.eq i:nth-child(2){animation-delay:.1s}.eq i:nth-child(3){animation-delay:.2s}.eq i:nth-child(4){animation-delay:.3s}.eq i:nth-child(5){animation-delay:.15s}
+@keyframes eq{to{height:50px}}
+.cube{width:64px;height:64px;margin:16px auto;cursor:pointer;border:4px solid #000;background:linear-gradient(135deg,#6b4a2b 0 35%,#4aa83a 35% 50%,#6b4a2b 50%);position:relative;image-rendering:pixelated;transition:transform .15s}
+.cube:hover{transform:rotate(-6deg) scale(1.08)}
+.cube.done::after{content:'✔';position:absolute;inset:0;display:grid;place-items:center;font-size:34px;color:#3b8cff;text-shadow:2px 2px 0 #000}
+.terms-ok{text-align:center;min-height:20px;color:var(--blue)}
+.dev{padding:10px;border:3px solid #000;border-radius:6px;margin-bottom:8px;background:#0d1626}
+
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--safe-b));z-index:40;display:flex;flex-direction:column;gap:8px;width:min(92%,460px)}
+.toast{padding:12px;border:4px solid #000;border-radius:6px;font-size:10px;animation:pop .2s}
+.toast.ok{background:#1a7a32;color:#fff}.toast.bad{background:#992244;color:#fff}.toast.info{background:#1c4f99;color:#fff}
+
+.doc{max-width:760px;margin:0 auto;padding:20px;line-height:2}
+.doc h1{font-size:18px}.doc h2{color:var(--green);font-size:12px;margin-top:24px}
+.doc p,.doc li{font-size:10px;line-height:2}
+
+@media(max-width:480px){html,body{font-size:10px}.win{padding:16px}.station-img{width:90px;height:90px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+label{display:block;margin-top:10px;font-size:10px}
+.seen{outline:3px solid var(--green)}
+ol{margin:0 0 14px}
+
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<div id="loader"><div class="logo">IGNAT</div><div class="bar"><i></i></div><small>Загрузка блоков...</small></div>
+
+<main id="app" hidden>
+  <header>
+    <h1>IGNAT SMART CONTROL</h1>
+    <p>Управляй своими устройствами Яндекса</p>
+  </header>
+
+  <section class="card" id="stationCard">
+    <div class="station-img" aria-label="Яндекс Станция"><span></span></div>
+    <div class="station-info">
+      <h2 id="stName">Яндекс Станция</h2>
+      <div id="status" class="badge off">OFFLINE</div>
+      <button class="mc" id="btnCheck">ПРОВЕРИТЬ ДОСТУП</button>
+      <button class="mc blue" id="btnConnect">ПОДКЛЮЧИТЬ</button>
+    </div>
+  </section>
+
+  <section class="card"><h3>ТУТОРИАЛЫ</h3><div class="row" style="margin:0"><button class="mc blue" data-tokenhelp>КАК ПОДКЛЮЧИТЬ ТОКЕН</button><button class="mc green" data-scenhelp>КАК ДОБАВИТЬ СЦЕНАРИЙ</button></div></section>
+  <section class="grid" id="desk">
+    <button class="icon" data-win="volume"><b>🔊</b>Громкость</button>
+    <button class="icon" data-win="music"><b>🎵</b>Музыка</button>
+    <button class="icon" data-win="clicker"><b>🎮</b>Игнат Кликер</button>
+    <button class="icon" data-win="record"><b>🏆</b>Рекорд</button>
+    <button class="icon" data-win="scenarios"><b>⚙️</b>Мои сценарии</button>
+    <button class="icon" data-win="devices"><b>📱</b>Устройства</button>
+    <button class="icon" data-win="reboot"><b>🔄</b>Перезагрузка</button>
+  </section>
+
+  <section class="card log"><h3>ЖУРНАЛ</h3><ul id="history"></ul></section>
+  <div id="role" class="dim" style="text-align:center;font-size:9px"></div>
+  <div class="row" style="justify-content:center"><button class="mc green" id="btnOwner">Я ВЛАДЕЛЕЦ САЙТА</button><button class="mc" id="btnLogout" hidden>ВЫЙТИ</button></div>
+  <footer>IGNAT SMART CONTROL · Автор: MISIDODY · <a href="terms.html" target="_blank">Условия</a> · <a href="privacy.html" target="_blank">Конфиденциальность</a></footer>
+</main>
+
+<div id="overlay" hidden><div id="win" class="win" role="dialog" aria-modal="true"></div></div>
+<div id="toasts"></div>
+
+<script>setTimeout(function(){if(!window.__isc){var d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:99;background:#0b1220;color:#ff6b6b;padding:24px;font:14px monospace';d.textContent='Ошибка: script.js не загрузился. Положите index.html, style.css, script.js и config.js в ОДНУ папку и откройте заново.';document.body.appendChild(d)}},4000)</script>
+<script src="config.js"></script>
+<script>
+'use strict';
+window.__isc = 1;
+/* IGNAT SMART CONTROL — автор: MISIDODY
+   ВАЖНО: сайт НЕ хранит секреты. Токен Яндекса живёт только на внешнем OAuth-прокси (PROXY).
+   Прокси должен отдавать: GET /auth/login, GET /api/devices, POST /api/scenarios/{id}/run
+   (вызывает https://api.iot.yandex.net/v1.0/scenarios/{id}/actions, scope iot:view iot:control). */
+
+// ---- Таблица сценариев: добавляйте новые записи здесь ----
+const SFX = ':2449274587';
+const SCENARIOS = [
+  ...[
+    '68f1df48-d2a0-4431-91c2-9b70a0f7feeb','3c56f40f-02bb-4a74-aaf9-79d73ddd8e52','0ae720f6-2b94-4bf5-880f-f73ec2101e8c',
+    '57d2e429-2bc9-4b39-86a2-d438470c9e3c','87f8a606-38dc-4ccd-b52a-a212a2f1f909','4433f2ff-bdf0-4c4c-a239-d0e99c76daa1',
+    'a140fece-0ad6-469d-95e6-eca043ff76ef','595fcf7a-49ce-414e-8fe8-8c234bda621e','212d274b-d2b6-4f68-b459-74302fb3caaf',
+    'a9f2f2c6-f580-4bcd-84a1-f1145202b41c'
+  ].map((u, i) => ({ key: 'vol' + (i + 1), name: 'Громкость ' + (i + 1), id: u + SFX })),
+  { key: 'clicker', name: 'Игнат Кликер', id: '0d48d785-cf55-466d-872f-c3feec69b083' + SFX },
+  { key: 'record', name: 'Рекорд', id: '212d274b-d2b6-4f68-b459-74302fb3caaf' + SFX }, // совпадает с «Громкость 9»!
+  { key: 'play', name: 'Продолжить', id: '6a0c8c18-d7e6-4c54-9e54-ee5b6d5d94ec' + SFX },
+  { key: 'stop', name: 'Стоп', id: 'a3e62445-0d7a-4f40-9612-75b26908f53f' + SFX },
+  { key: 'next', name: 'Следующий трек', id: '95194065-62ba-4d5c-be45-ed51c757b290' + SFX },
+  { key: 'koch', name: 'КОЧ БРАТАН — ИГНАТ И РОМА', id: '3e7ca167-9361-4082-9d33-cffe0e71fa0c' + SFX },
+  { key: 'reboot', name: 'Перезагрузка устройства', id: '3fe6969a-50d1-4c49-a59f-2314fb06703e' + SFX }
+];
+const sc = k => k.startsWith('id:') ? allSc().find(s => s.id === k.slice(3)) : SCENARIOS.find(s => s.key === k);
+function allSc() { const seen = new Set(); return [...loaded.map(s => ({ ...s, src: 'yandex' })), ...custom.map(s => ({ ...s, src: 'custom' }))].filter(s => !seen.has(s.id) && seen.add(s.id)); }
+
+// ---- Хранилище ----
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('isc_' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('isc_' + k, JSON.stringify(v)); } catch {} }
+};
+const CFG = window.ISC_CONFIG || {};
+const FIXED = /^(https:\/\/|http:\/\/localhost)/i.test(CFG.PROXY_URL || '');
+let proxy = FIXED ? CFG.PROXY_URL.trim() : store.get('proxy', '');
+let history = store.get('history', []);
+let state = 'OFFLINE';          // ONLINE | OFFLINE | CONNECTING | ERROR
+let devices = [];
+let custom = store.get('custom', []), loaded = [], lastrun = store.get('lastrun', {}), lastStatus = {}, draft = null, helpOld = '';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---- Уведомления / журнал ----
+function toast(msg, type = 'info') {
+  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), 4000);
+}
+function log(text, ok) {
+  history.unshift({ t: new Date().toLocaleString('ru-RU'), text, ok }); history = history.slice(0, 50);
+  store.set('history', history); renderLog();
+}
+function renderLog() {
+  const el = $('#history');
+  el.innerHTML = history.length ? history.map(h => `<li class="${h.ok === true ? 'ok' : h.ok === false ? 'bad' : 'dim'}">[${esc(h.t)}] ${esc(h.text)}</li>`).join('') : '<li class="dim">Пока пусто</li>';
+}
+function setState(s, label) {
+  state = s;
+  const el = $('#status');
+  el.textContent = label || s;
+  el.className = 'badge ' + ({ ONLINE: 'on', OFFLINE: 'off', CONNECTING: 'wait', ERROR: 'err', SENDING: 'run' }[s] || 'off');
+}
+
+// ---- Запросы к прокси ----
+async function api(path, opts = {}) {
+  if (!proxy) throw new Error('NO_PROXY');
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(proxy.replace(/\/$/, '') + path, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal, ...opts });
+    let data = null; try { data = await r.json(); } catch {}
+    if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; e.data = data; throw e; }
+    return data;
+  } finally { clearTimeout(to); }
+}
+function explain(e) {
+  if (e.message === 'NO_PROXY') return 'Не указан адрес OAuth-прокси';
+  if (e.name === 'AbortError') return 'Тайм-аут подключения';
+  if (e.status === 401) return 'OAuth-токен недействителен или нет входа';
+  if (e.status === 403) return 'Нет разрешения на управление (iot:control)';
+  if (e.status === 404) return 'Сценарий не найден (проверьте ID)';
+  if (e.status) return 'Ошибка сервера: ' + e.status;
+  return 'Ошибка подключения (прокси недоступен или CORS)';
+}
+
+async function loadDevices(silent) {
+  setState('CONNECTING');
+  try {
+    const d = await api('/api/devices');
+    devices = (d && (d.devices || d)) || [];
+    const st = devices.find(x => /station|speaker/i.test((x.type || '') + (x.name || ''))) || devices[0];
+    if (!st) { setState('OFFLINE'); if (!silent) toast('Станции не найдены', 'bad'); log('Станции не найдены', false); return; }
+    $('#stName').textContent = st.name || 'Яндекс Станция';
+    const on = st.state === 'online' || st.online === true;
+    setState(on ? 'ONLINE' : 'OFFLINE');
+    toast(on ? 'Устройство подключено' : 'Устройство оффлайн', on ? 'ok' : 'bad');
+    log(on ? 'Устройство подключено: ' + (st.name || '') : 'Устройство оффлайн', on);
+    await loadScenarios(true);
+  } catch (e) {
+    devices = []; setState(e.status === 401 ? 'OFFLINE' : 'ERROR');
+    if (!silent) toast(explain(e), 'bad'); log(explain(e), false);
+  }
+}
+
+// ---- Запуск сценария ----
+async function run(key, btn, out) {
+  const s = sc(key);
+  if (state !== 'ONLINE') { toast('Устройство не ONLINE — команда не отправлена', 'bad'); if (out) out.textContent = 'OFFLINE: команда не отправлена'; return false; }
+  const prog = $('.prog'); if (prog) prog.classList.add('on');
+  btn && btn.classList.add('busy'); btn && (btn.disabled = true);
+  setState('SENDING', 'COMMAND SENDING');
+  try {
+    const d = await api('/api/scenarios/' + encodeURIComponent(s.id) + '/run', { method: 'POST', body: '{}' });
+    if (!d || d.status !== 'ok') throw Object.assign(new Error('bad'), { status: 502 });
+    setState('ONLINE');
+    // Яндекс подтверждает только приём команды, а не результат — поэтому COMMAND SENT.
+    toast('COMMAND SENT: «' + s.name + '» принята Яндексом', 'ok');
+    lastrun[s.id] = new Date().toISOString(); store.set('lastrun', lastrun); lastStatus[s.id] = 'COMMAND SENT';
+    log('COMMAND SENT: ' + s.name, true); if (out) out.textContent = 'COMMAND SENT (исполнение не подтверждается API)';
+    return true;
+  } catch (e) {
+    setState(e.status === 401 || e.status === 403 ? 'OFFLINE' : 'ERROR');
+    lastStatus[s.id] = 'ERROR'; toast(explain(e), 'bad'); log('Ошибка «' + s.name + '»: ' + explain(e), false); if (out) out.textContent = 'ERROR: ' + explain(e);
+    return false;
+  } finally {
+    prog && prog.classList.remove('on'); btn && btn.classList.remove('busy'); btn && (btn.disabled = false); refreshList();
+  }
+}
+
+// ---- Окна ----
+const overlay = $('#overlay'), win = $('#win');
+function openWin(html) {
+  win.innerHTML = '<button class="mc red x" data-close aria-label="Закрыть">✕</button>' + html;
+  win.classList.remove('closing'); overlay.hidden = false;
+}
+function closeWin() {
+  win.classList.add('closing'); setTimeout(() => { overlay.hidden = true; win.classList.remove('closing'); }, 170);
+}
+overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('[data-close]')) closeWin(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) closeWin(); });
+
+const runBtn = (key, label, cls = 'green') => `<button class="mc ${cls}" data-run="${key}">${label}</button>`;
+const PROG = '<div class="prog"><i></i></div><p class="dim" id="out">Ожидание команды</p>';
+const histFor = keys => `<h3>ИСТОРИЯ</h3><ul class="log" style="padding:0;list-style:none;font-size:9px">${history.filter(h => keys.some(k => h.text.includes(sc(k).name))).slice(0, 5).map(h => `<li class="${h.ok ? 'ok' : 'bad'}">[${esc(h.t)}] ${esc(h.text)}</li>`).join('') || '<li class="dim">Нет запусков</li>'}</ul>`;
+
+function confirmWin(key, back) {
+  openWin(`<h2>ПОДТВЕРЖДЕНИЕ</h2><p>Вы действительно хотите выполнить этот сценарий?</p><p class="dim">${esc(sc(key).name)}</p>${PROG}
+  <div class="row"><button class="mc" data-close>ОТМЕНА</button>${runBtn(key, 'ПРОДОЛЖИТЬ', 'red')}</div>`);
+}
+
+const WINDOWS = {
+  volume: () => `<h2>УПРАВЛЕНИЕ ГРОМКОСТЬЮ</h2><div class="vol">${SCENARIOS.filter(s => s.key.startsWith('vol')).map(s => runBtn(s.key, s.name.replace('Громкость ', '🔊 '))).join('')}</div>${PROG}`,
+  music: () => `<h2>MUSIC PLAYER</h2><div class="eq" id="eq"><i></i><i></i><i></i><i></i><i></i></div><p id="mstate" class="dim">Статус: неизвестно (API не сообщает состояние)</p>
+    <div class="stack">${runBtn('play', '▶ ПРОДОЛЖИТЬ')}${runBtn('stop', '■ СТОП', 'red')}${runBtn('next', '⏭ СЛЕДУЮЩИЙ ТРЕК', 'blue')}</div>${PROG}`,
+  clicker: () => `<h2>ИГНАТ КЛИКЕР</h2><p>Запустить сценарий «Игнат Кликер».</p>${runBtn('clicker', '🎮 ЗАПУСТИТЬ')}${PROG}`,
+  record: () => `<h2>РЕКОРД</h2><p>Запуск потребует подтверждения.</p><button class="mc green" data-confirm="record">🏆 ЗАПУСТИТЬ</button>${PROG}${histFor(['record'])}`,
+  scenarios: () => `<h2>СЦЕНАРИИ</h2><div class="stack">${runBtn('koch', 'КОЧ БРАТАН — ИГНАТ И РОМА')}<button class="mc red" data-confirm="reboot">ПЕРЕЗАГРУЗКА УСТРОЙСТВА</button></div>${PROG}`,
+  devices: () => `<h2>УСТРОЙСТВА</h2>${devices.length ? devices.map(d => `<div class="dev">${esc(d.name || 'Устройство')}<br><span class="${d.state === 'online' || d.online ? 'ok' : 'bad'}">${d.state === 'online' || d.online ? 'ONLINE' : 'OFFLINE'}</span></div>`).join('') : '<p class="dim">Список пуст. Подключите прокси.</p>'}
+    <div class="row"><button class="mc blue" data-refresh>ОБНОВИТЬ</button></div>`,
+  reboot: () => null
+};
+
+function connectWin() {
+  openWin(`<h2>ПОДКЛЮЧЕНИЕ ЯНДЕКС СТАНЦИИ</h2>
+  <p class="dim" style="font-size:9px">Пароль Яндекса сайт не запрашивает. Вход и токены обрабатывает ваш защищённый OAuth-прокси.</p>
+  ${FIXED ? '<p class="ok" style="font-size:9px">Прокси задан в config.js</p>' : '<label>Адрес OAuth-прокси (или укажите в config.js)</label><input type="url" id="proxyUrl" value="' + esc(proxy) + '" placeholder="https://my-proxy.workers.dev" autocomplete="off">'}
+  <div class="stack">
+    <button class="mc blue" data-login="oauth">1 · ВОЙТИ ЧЕРЕЗ ЯНДЕКС</button>
+    <div class="dev"><label style="margin-top:0">2 · ВВЕСТИ OAUTH TOKEN</label>
+      <input type="password" id="tokIn" placeholder="Введите OAuth-токен" autocomplete="off" spellcheck="false">
+      <div class="row" style="margin-top:0"><button class="mc" data-show>ПОКАЗАТЬ ТОКЕН</button><button class="mc blue" data-token>ПОДКЛЮЧИТЬ</button></div>
+      <button class="mc" data-tokenhelp style="width:100%;margin-top:10px">КАК ПОЛУЧИТЬ ТОКЕН?</button>
+      <p class="dim" style="font-size:8px;margin:10px 0 0">Токен уходит по HTTPS на прокси, не сохраняется в браузере, поле очищается сразу после отправки.</p></div>
+    <button class="mc green" data-ownerwin>3 · Я ВЛАДЕЛЕЦ СТАНЦИИ!</button>
+  </div>`);
+}
+function ownerWin() {
+  openWin(`<h2>ОКНО ВЛАДЕЛЬЦА</h2><p>Вход выполняется на официальной странице Яндекса. Логин и пароль на этом сайте не вводятся.</p>
+  <p class="dim" style="font-size:9px">После входа сайт сам загрузит устройства и сценарии. Прокси может пускать только ваш аккаунт.</p>
+  <div class="row"><button class="mc green" data-login="owner">ПЕРЕЙТИ НА ВХОД ЯНДЕКСА</button><button class="mc" data-backconn>НАЗАД</button></div>`);
+}
+function savedProxy() {
+  const el = $('#proxyUrl'); if (!el) return !!proxy;
+  const v = el.value.trim();
+  if (!/^https:\/\/.+/i.test(v) && !/^http:\/\/localhost/i.test(v)) { toast('Нужен адрес вида https://...', 'bad'); return false; }
+  proxy = v; store.set('proxy', proxy); return true;
+}
+async function sendToken() {
+  if (!savedProxy()) return;
+  const i = $('#tokIn'), v = i.value.trim(); if (!v) return toast('Введите токен', 'bad');
+  i.value = ''; setState('CONNECTING');
+  try {
+    await api('/auth/token', { method: 'POST', body: JSON.stringify({ token: v }) });
+    toast('Токен принят и проверен сервером', 'ok'); log('Токен передан прокси', true); closeWin(); await loadDevices();
+  } catch (e) { setState('ERROR'); toast(explain(e), 'bad'); log('Токен не принят: ' + explain(e), false); }
+}
+
+// ---- Условия: оба документа открыть, затем 10 сек, затем согласие ----
+const DOCS = {
+  t: ['УСЛОВИЯ ПОЛЬЗОВАНИЯ', `<p>Проект: IGNAT SMART CONTROL. Автор: MISIDODY.</p>
+<h3>1. Общие положения</h3><p>Сайт — неофициальная веб-панель для управления собственной Яндекс Станцией через сценарии умного дома Яндекса. Проект не связан с компанией Яндекс и не одобрен ею.</p>
+<h3>2. Использование</h3><p>Используйте сайт только со своими устройствами или с разрешения владельца. Запрещено обходить авторизацию, права доступа и ограничения Яндекса. Вы сами отвечаете за запускаемые сценарии, в том числе перезагрузку.</p>
+<h3>3. Статусы и результат</h3><p>COMMAND SENT означает, что Яндекс принял команду. Выполнение устройством API не гарантирует. Если устройство недоступно, команды не отправляются.</p>
+<h3>4. Доступность</h3><p>Сайт предоставляется «как есть». Работа зависит от вашего OAuth-прокси и API Яндекса.</p>
+<h3>5. Изменения</h3><p>Условия могут обновляться. Продолжая пользоваться сайтом, вы принимаете актуальную редакцию.</p>`],
+  p: ['ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ', `<p>Проект: IGNAT SMART CONTROL. Автор: MISIDODY.</p>
+<h3>1. Данные в браузере</h3><p>В localStorage сохраняются: принятие условий, адрес прокси, ваши сценарии (названия и ID), даты запусков и журнал. Автору сайта они не передаются.</p>
+<h3>2. Авторизация Яндекса</h3><p>Сайт не запрашивает пароль от Яндекса. Вход идёт на официальной странице Яндекса. OAuth-токен хранится только на вашем прокси и не сохраняется в браузере.</p>
+<h3>3. Разрешения</h3><p>Нужны права iot:view и iot:control. Отозвать доступ можно в настройках аккаунта Яндекса.</p>
+<h3>4. Передача данных</h3><p>Запросы идут от браузера на ваш прокси, затем в API Яндекса. Политику прокси определяет его владелец.</p>
+<h3>5. Удаление</h3><p>Очистите данные сайта в настройках браузера, чтобы удалить локальные данные.</p>`]
+};
+const TS = { t: false, p: false, left: null, ready: false, agreed: false, iv: null };
+function paintTerms() {
+  const c2 = $('#cd2'); if (c2) c2.textContent = TS.ready ? 'Таймер завершён. Вернитесь назад' : (TS.t && TS.p ? 'Осталось: ' + TS.left + ' сек' : 'Откройте второй документ');
+  const cd = $('#cd'); if (!cd) return;
+  const go = $('#goOn'), cube = $('#cube');
+  cd.textContent = !(TS.t && TS.p) ? 'Откройте оба документа' : TS.ready ? 'Таймер завершён. Нажмите на кубик' : 'Осталось: ' + TS.left + ' сек';
+  if (TS.agreed) { cube.classList.add('done'); cube.setAttribute('aria-checked', 'true'); $('#tok').textContent = 'Подтверждено'; }
+  go.disabled = !(TS.ready && TS.agreed);
+  go.textContent = TS.ready ? 'ПРОДОЛЖИТЬ' : 'ПРОДОЛЖИТЬ' + (TS.left !== null ? ' (' + TS.left + ')' : '');
+}
+function startTermsTimer() {
+  if (TS.left !== null || !(TS.t && TS.p)) return;
+  TS.left = 10;
+  TS.iv = setInterval(() => { TS.left--; if (TS.left <= 0) { TS.left = 0; TS.ready = true; clearInterval(TS.iv); } paintTerms(); }, 1000);
+  paintTerms();
+}
+function docWin(k) {
+  TS[k] = true;
+  openWin(`<h2>${DOCS[k][0]}</h2><div class="docbox">${DOCS[k][1]}</div><div class="terms-ok" id="cd2"></div><button class="mc green" data-termsback style="width:100%">НАЗАД</button>`);
+  startTermsTimer(); paintTerms();
+}
+function termsWin() {
+  openWin(`<h2>УСЛОВИЯ И ПОЛИТИКА</h2><p>Откройте оба документа (они читаются прямо здесь). После этого начнётся отсчёт 10 секунд.</p>
+  <div class="stack"><button class="mc blue" data-doc="t">${TS.t ? '✔ ' : ''}УСЛОВИЯ ПОЛЬЗОВАНИЯ</button>
+  <button class="mc blue" data-doc="p">${TS.p ? '✔ ' : ''}ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ</button></div>
+  <div class="terms-ok" id="cd"></div>
+  <div class="cube" id="cube" role="checkbox" aria-checked="false" tabindex="0" aria-label="Подтвердить согласие"></div>
+  <div class="terms-ok" id="tok"></div><div class="row"><button class="mc green" id="goOn" disabled>ПРОДОЛЖИТЬ</button></div>`);
+  const tick = () => {
+    if (!TS.ready) return toast('Откройте оба документа и дождитесь окончания таймера', 'bad');
+    TS.agreed = true; paintTerms();
+  };
+  $('#cube').onclick = tick; $('#cube').onkeydown = e => (e.key === 'Enter' || e.key === ' ') && tick();
+  $('#goOn').onclick = () => { if (TS.ready && TS.agreed) { store.set('terms', true); connectWin(); } };
+  paintTerms();
+}
+function welcomeWin() {
+  openWin(`<h2>ДОБРО ПОЖАЛОВАТЬ!</h2><p>Добро пожаловать в IGNAT SMART CONTROL. Подключи свою Яндекс Станцию и управляй ей через сайт.</p>
+  <button class="mc green" id="startBtn">УПРАВЛЯТЬ УСТРОЙСТВОМ ЧЕРЕЗ САЙТ</button>`);
+  $('#startBtn').onclick = connectWin;
+}
+
+// ---- Мои сценарии ----
+function scenRows() {
+  const preset = ['koch', 'reboot'].map(k => ({ key: k, name: sc(k).name, id: sc(k).id, src: 'preset' }));
+  const rows = [...preset, ...allSc().map(s => ({ key: 'id:' + s.id, name: s.name, id: s.id, src: s.src, active: s.active }))];
+  return rows.map(r => `<div class="dev"><b>${esc(r.name)}</b><br><span class="dim" style="font-size:8px;word-break:break-all">ID: ${esc(r.id)}</span><br>
+  <span style="font-size:9px">Статус: ${esc(lastStatus[r.id] || (r.active === false ? 'ВЫКЛЮЧЕН В ЯНДЕКСЕ' : 'ГОТОВ'))}</span><br>
+  <span class="dim" style="font-size:9px">Последний запуск: ${lastrun[r.id] ? new Date(lastrun[r.id]).toLocaleString('ru-RU') : '—'}</span>
+  <div class="row">${r.key === 'reboot' ? '<button class="mc red" data-confirm="reboot">ЗАПУСК</button>' : runBtn(r.key, 'ЗАПУСК')}
+  ${r.src === 'custom' && isOwner() ? `<button class="mc blue" data-edit="${esc(r.id)}">ИЗМЕНИТЬ</button><button class="mc red" data-del="${esc(r.id)}">УДАЛИТЬ</button>` : ''}</div></div>`).join('');
+}
+function refreshList() { const el = $('#scl'); if (el) el.innerHTML = scenRows(); }
+function scenariosWin() {
+  openWin(`<h2>МОИ СЦЕНАРИИ</h2>${isOwner() ? '<button class="mc green" data-add style="width:100%;margin-bottom:12px">+ ДОБАВИТЬ СЦЕНАРИЙ</button>' : ''}
+  <button class="mc blue" data-loadsc style="width:100%;margin-bottom:12px">ОБНОВИТЬ ИЗ ЯНДЕКСА</button>
+  <button class="mc" data-scenhelp style="width:100%;margin-bottom:12px">ТУТОРИАЛ: КАК СОЗДАТЬ СЦЕНАРИЙ</button>${PROG}<div id="scl">${scenRows()}</div>`);
+}
+async function loadScenarios(silent) {
+  try {
+    const d = await api('/api/scenarios');
+    loaded = ((d && d.scenarios) || d || []).map(s => ({ id: s.id, name: s.name || s.id, active: s.is_active }));
+    if (!silent) toast('Сценарии загружены: ' + loaded.length, 'ok'); log('Загружено сценариев из Яндекса: ' + loaded.length, true);
+  } catch (e) { if (!silent) toast(explain(e), 'bad'); log('Сценарии не загружены: ' + explain(e), false); }
+  refreshList();
+}
+function scFormWin(old) {
+  const s = draft || custom.find(x => x.id === old) || { name: '', id: '' };
+  openWin(`<h2>${old ? 'ИЗМЕНЕНИЕ СЦЕНАРИЯ' : 'ДОБАВЛЕНИЕ НОВОГО СЦЕНАРИЯ'}</h2>
+  <label>Название сценария</label><input type="text" id="scN" value="${esc(s.name)}" maxlength="60">
+  <label>Scenario ID</label><input type="text" id="scI" value="${esc(s.id)}" maxlength="120" autocomplete="off" spellcheck="false">
+  <button class="mc" data-help data-old="${esc(old)}" style="margin-top:8px">ГДЕ ВЗЯТЬ ID СЦЕНАРИЯ?</button>
+  <div class="row"><button class="mc green" data-save="${esc(old)}">${old ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ'}</button><button class="mc" data-back>ОТМЕНА</button></div>`);
+}
+function helpWin() {
+  openWin(`<h2>ГДЕ ВЗЯТЬ ID СЦЕНАРИЯ?</h2><ol style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Открой приложение «Дом с Алисой».</li><li>Перейди в раздел «Умный дом».</li><li>Открой раздел «Сценарии».</li><li>Создай новый сценарий.</li>
+  <li>Настрой нужные действия.</li><li>Сохрани сценарий.</li>
+  <li>ID в приложении не показывается. Получить его можно через официальный API Яндекса (список сценариев в данных пользователя). После подключения сайт загружает такой список сам.</li>
+  <li>Добавь название и ID в IGNAT SMART CONTROL.</li></ol>
+  <button class="mc blue" data-understood>ПОНЯТНО</button>`);
+}
+function saveScenario(old) {
+  const n = $('#scN').value.trim(), id = $('#scI').value.trim();
+  if (!n || !id) return toast('Заполните название и ID', 'bad');
+  if (!/^[A-Za-z0-9:_.-]{8,120}$/.test(id)) return toast('Некорректный ID', 'bad');
+  if ([...SCENARIOS, ...custom.filter(c => c.id !== old)].some(s => s.id === id)) return toast('Такой ID уже есть', 'bad');
+  if (old) custom = custom.map(c => c.id === old ? { name: n, id } : c); else custom.push({ name: n, id });
+  store.set('custom', custom); draft = null; log((old ? 'Изменён сценарий: ' : 'Добавлен сценарий: ') + n); toast(old ? 'Сценарий изменён' : 'Сценарий добавлен', 'ok'); scenariosWin();
+}
+const PH = u => 'https://ibb.co/' + u;
+const photos = list => '<div class="row" style="margin:6px 0 12px">' + list.map((u, i) => `<a class="mc" style="text-decoration:none;font-size:9px;padding:8px 10px" href="${PH(u)}" target="_blank" rel="noopener noreferrer">ФОТО ${i + 1}</a>`).join('') + '</div>';
+function tokenHelpWin() {
+  openWin(`<h2>КАК ПОДКЛЮЧИТЬ ТОКЕН</h2><ol style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Открой любой браузер (Firefox, Chrome, Яндекс) и найди страницу по запросу как на фото. Выбери первую ссылку и пролистай вниз.</li>
+  </ol>${photos(['k2sZ1P9V', '0RZNjQVT'])}
+  <ol start="2" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Зайди на <b>oauth.yandex.ru</b>. Если есть кнопка «Создать», нажми её.</li>
+  <li><b>ВАЖНО:</b> выбери только вариант <b>API</b>. С другим токен у тебя может не заработать.</li>
+  <li>Впиши название и почту. В доступах поставь <b>iot:view</b> и <b>iot:control</b> (просмотр и управление умным домом).</li>
+  <li>Нажми «Создать» и пролистай вниз по фото. Открой созданное приложение.</li></ol>${photos(['MkfwD5pq', 'mF5SRSd6'])}
+  <ol start="6" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Поля про Госуслуги необязательные, их заполнять не нужно.</li>
+  <li class="bad"><b>ВАЖНО:</b> Client secret никому не показывай. Токен тоже: с ним любой управляет твоими устройствами. Если секрет или токен утекли, удали приложение и создай заново.</li>
+  <li>Скопируй <b>Client ID</b> и вставь ниже. Кнопка откроет страницу разрешения Яндекса. Ссылка выглядит так: <span class="dim" style="word-break:break-all">https://oauth.yandex.ru/authorize?response_type=token&amp;client_id=ТВОЙ_CLIENT_ID</span></li></ol>
+  <input type="text" id="cidIn" placeholder="Client ID (32 символа)" autocomplete="off" spellcheck="false">
+  <button class="mc blue" data-gettoken style="width:100%">ОТКРЫТЬ ССЫЛКУ ПОЛУЧЕНИЯ ТОКЕНА</button>
+  <ol start="9" style="padding-left:18px;font-size:10px;line-height:2;margin-top:12px">
+  <li>Если Яндекс спросит про Госуслуги, читай экран и продолжай с необязательными полями пустыми. Нажми «Разрешить».</li>
+  <li>Скопируй полученный токен (в адресной строке после <b>access_token=</b> или на странице) и вставь в поле токена на сайте.</li></ol>
+  <button class="mc green" data-close style="width:100%">ПОНЯТНО</button>`);
+}
+function scenHelpWin() {
+  openWin(`<h2>ТУТОРИАЛ: СОЗДАТЬ СЦЕНАРИЙ</h2>
+  <p class="bad" style="font-size:9px">Сценарий нельзя добавить, просто вписав любые буквы в ID. Сначала он должен существовать в Яндексе. Нужен реальный ID.</p>
+  <ol style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Открой приложение «Дом с Алисой» (или Яндекс) и перейди в «Умный дом».</li></ol>${photos(['DPR33sRk', 'cXK2zHLm'])}
+  <ol start="2" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Внизу иконка Алисы, «Мой дом», «Каталог», «Советы». Тебе нужен раздел «Сценарии» внутри умного дома.</li>
+  <li>Нажми «Добавить сценарий».</li></ol>${photos(['Q3SwqCtc', 'kswV5RTr'])}
+  <ol start="4" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Придумай любое название. Добавь условие: выбери «Фразу» и напиши любую.</li></ol>${photos(['JwDMvRL4'])}
+  <ol start="6" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Листай вниз и добавь действие, затем выбери нужное по фото.</li></ol>${photos(['sJP8mTd9', 'DPdpnsvx'])}
+  <ol start="7" style="padding-left:18px;font-size:10px;line-height:2">
+  <li>Нажми «Создать» как на фото.</li></ol>${photos(['9RPJszZ'])}
+  <p class="dim" style="font-size:9px">Дальше: после подключения сайт сам загрузит список сценариев вместе с ID. Если нужного нет, добавь его вручную кнопкой «+ ДОБАВИТЬ СЦЕНАРИЙ».</p>
+  <button class="mc green" data-close style="width:100%">ПОНЯТНО</button>`);
+}
+function deleteWin(id) {
+  const s = custom.find(c => c.id === id); if (!s) return;
+  openWin(`<h2>УДАЛИТЬ СЦЕНАРИЙ?</h2><p>${esc(s.name)}</p><div class="row"><button class="mc" data-back>ОТМЕНА</button><button class="mc red" data-delok="${esc(id)}">УДАЛИТЬ</button></div>`);
+}
+
+// ---- События ----
+document.addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.win) {
+    if (!store.get('terms', false)) return termsWin();
+    if (t.dataset.win === 'reboot') return confirmWin('reboot');
+    if (t.dataset.win === 'scenarios') return scenariosWin();
+    return openWin(WINDOWS[t.dataset.win]());
+  }
+  if (t.dataset.confirm) return confirmWin(t.dataset.confirm);
+  if (t.dataset.run) {
+    const out = $('#out'); const eq = $('#eq');
+    const ok = await run(t.dataset.run, t, out);
+    if (eq && ok) { eq.classList.toggle('play', t.dataset.run !== 'stop'); const m = $('#mstate'); if (m) m.textContent = 'Последняя команда: ' + sc(t.dataset.run).name + ' (не подтверждено API)'; }
+    return;
+  }
+  if (t.dataset.refresh) { await loadDevices(); return openWin(WINDOWS.devices()); }
+  if (t.dataset.login) {
+    if (!savedProxy()) return;
+    const ret = encodeURIComponent(location.href.split('#')[0]);
+    location.href = proxy.replace(/\/$/, '') + '/auth/login?mode=' + t.dataset.login + '&return=' + ret; return;
+  }
+  if (t.dataset.doc) return docWin(t.dataset.doc);
+  if (t.hasAttribute('data-termsback')) return termsWin();
+  if ((t.hasAttribute('data-add') || t.dataset.edit || t.dataset.del || t.dataset.delok || t.dataset.save !== undefined) && !isOwner()) return toast('Доступно только владельцу', 'bad');
+  if (t.id === 'btnOwner') { location.href = 'logins.html'; return; }
+  if (t.id === 'btnLogout') { try { await api('/site/logout', { method: 'POST', body: '{}' }); } catch {} location.href = 'logins.html'; return; }
+  if (t.hasAttribute('data-tokenhelp')) return tokenHelpWin();
+  if (t.hasAttribute('data-scenhelp')) return scenHelpWin();
+  if (t.hasAttribute('data-gettoken')) {
+    const id = ($('#cidIn').value || '').trim();
+    if (!/^[A-Za-z0-9]{20,40}$/.test(id)) return toast('Вставьте Client ID (не секрет)', 'bad');
+    $('#cidIn').value = ''; window.open('https://oauth.yandex.ru/authorize?response_type=token&client_id=' + encodeURIComponent(id), '_blank', 'noopener'); return;
+  }
+  if (t.hasAttribute('data-show')) { const i = $('#tokIn'); i.type = i.type === 'password' ? 'text' : 'password'; t.textContent = i.type === 'password' ? 'ПОКАЗАТЬ ТОКЕН' : 'СКРЫТЬ ТОКЕН'; return; }
+  if (t.hasAttribute('data-token')) return sendToken();
+  if (t.hasAttribute('data-ownerwin')) { if (!savedProxy()) return; return ownerWin(); }
+  if (t.hasAttribute('data-backconn')) return connectWin();
+  if (t.hasAttribute('data-add')) { draft = null; return scFormWin(''); }
+  if (t.dataset.edit) { draft = null; return scFormWin(t.dataset.edit); }
+  if (t.dataset.del) return deleteWin(t.dataset.del);
+  if (t.dataset.delok) { custom = custom.filter(c => c.id !== t.dataset.delok); store.set('custom', custom); toast('Сценарий удалён', 'info'); log('Сценарий удалён'); return scenariosWin(); }
+  if (t.hasAttribute('data-help')) { draft = { name: $('#scN').value, id: $('#scI').value }; helpOld = t.dataset.old || ''; return helpWin(); }
+  if (t.hasAttribute('data-understood')) return scFormWin(helpOld);
+  if (t.hasAttribute('data-back')) { draft = null; return scenariosWin(); }
+  if (t.dataset.save !== undefined) return saveScenario(t.dataset.save);
+  if (t.hasAttribute('data-loadsc')) { if (!proxy) return toast('Сначала подключите прокси', 'bad'); await loadScenarios(); return; }
+  if (t.hasAttribute('data-check')) { if (!savedProxy()) return; closeWin(); return loadDevices(); }
+  if (t.id === 'btnConnect') return store.get('terms', false) ? connectWin() : termsWin();
+  if (t.id === 'btnCheck') return proxy ? loadDevices() : toast('Сначала подключите прокси', 'bad');
+});
+
+// ---- Фон: пиксельные частицы ----
+(function fx() {
+  const c = $('#fx'), x = c.getContext('2d'); let w, h, P = [];
+  const rs = () => { w = c.width = innerWidth; h = c.height = innerHeight; }; rs(); addEventListener('resize', rs);
+  for (let i = 0; i < 40; i++) P.push({ x: Math.random() * 2000, y: Math.random() * 2000, s: 3 + Math.random() * 5, v: .2 + Math.random() * .6, c: Math.random() > .5 ? '#3ddc5a' : '#3b8cff' });
+  (function tick() {
+    x.clearRect(0, 0, w, h); x.globalAlpha = .35;
+    P.forEach(p => { p.y -= p.v; if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; } x.fillStyle = p.c; x.fillRect(p.x % w, p.y, p.s, p.s); });
+    requestAnimationFrame(tick);
+  })();
+})();
+
+
+// ---- Вход на сайт и роль (проверяет сервер-прокси) ----
+let me = null;
+const isOwner = () => !FIXED || (me && me.role === 'owner');
+async function gate() {
+  if (!FIXED) return false;
+  try { me = await api('/site/me'); }
+  catch (e) { if (e.status === 401) { location.href = 'logins.html'; return true; } }
+  renderRole(); return false;
+}
+function renderRole() {
+  const r = $('#role'); if (r && me) r.textContent = (me.role === 'owner' ? 'ВЛАДЕЛЕЦ: ' : 'ПОЛЬЗОВАТЕЛЬ: ') + me.username;
+  const o = $('#btnLogout'); if (o) o.hidden = !me;
+}
+
+// ---- Старт ----
+setTimeout(async () => {
+  if (await gate()) return;
+  $('#loader').classList.add('hide'); $('#app').hidden = false; renderLog(); setState('OFFLINE');
+  if (!store.get('terms', false)) termsWin();
+  else if (proxy) loadDevices(true);
+  else welcomeWin();
+}, 1500);
+
+</script>
+</body>
+</html>
